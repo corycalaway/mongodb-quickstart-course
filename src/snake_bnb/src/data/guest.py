@@ -4,11 +4,11 @@ import mongoengine
 
 class Guest(mongoengine.Document):
     registered_date = mongoengine.DateTimeField(default=datetime.datetime.now)
-    species = mongoengine.StringField(required=True)
+    gender = mongoengine.StringField(required=False)
 
-    length = mongoengine.FloatField(required=True)
+    fun_level = mongoengine.FloatField(required=True)
     name = mongoengine.StringField(required=True)
-    is_venomous = mongoengine.BooleanField(required=True)
+    is_new = mongoengine.BooleanField(required=True)
 
     meta = {
         'db_alias': 'core',
