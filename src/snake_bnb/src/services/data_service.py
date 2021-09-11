@@ -5,9 +5,9 @@ import datetime
 import bson
 
 from data.bookings import Booking
-from data.cages import Cage
+from data.toys import Toy
 from data.vip import Vip
-from data.snakes import Snake
+from data.guests import Guest
 
 
 def create_account(name: str, email: str) -> Vip:
@@ -25,124 +25,124 @@ def find_account_by_email(email: str) -> Vip:
     return vip
 
 
-def register_cage(active_account: Vip,
+def register_toy(active_account: Vip,
                   name, allow_dangerous, has_toys,
-                  carpeted, meters, price) -> Cage:
-    cage = Cage()
+                  carpeted, meters, price) -> Toy:
+    toy = Toy()
 
-    cage.name = name
-    cage.square_meters = meters
-    cage.is_carpeted = carpeted
-    cage.has_toys = has_toys
-    cage.allow_dangerous_snakes = allow_dangerous
-    cage.price = price
+    toy.name = name
+    toy.square_meters = meters
+    toy.is_carpeted = carpeted
+    toy.has_toys = has_toys
+    toy.allow_dangerous_guests = allow_dangerous
+    toy.price = price
 
-    cage.save()
+    toy.save()
 
     account = find_account_by_email(active_account.email)
-    account.cage_ids.append(cage.id)
+    account.toy_ids.append(toy.id)
     account.save()
 
-    return cage
+    return toy
 
 
-def find_cages_for_user(account: Vip) -> List[Cage]:
-    query = Cage.objects(id__in=account.cage_ids)
-    cages = list(query)
+def find_toys_for_user(account: Vip) -> List[Toy]:
+    query = Toy.objects(id__in=account.toy_ids)
+    toys = list(query)
 
-    return cages
+    return toys
 
 
-def add_available_date(cage: Cage,
-                       start_date: datetime.datetime, days: int) -> Cage:
+def add_available_date(toy: Toy,
+                       start_date: datetime.datetime, days: int) -> Toy:
     booking = Booking()
     booking.check_in_date = start_date
     booking.check_out_date = start_date + datetime.timedelta(days=days)
 
-    cage = Cage.objects(id=cage.id).first()
-    cage.bookings.append(booking)
-    cage.save()
+    toy = Toy.objects(id=toy.id).first()
+    toy.bookings.append(booking)
+    toy.save()
 
-    return cage
+    return toy
 
 
-def add_snake(account, name, length, species, is_venomous) -> Snake:
-    snake = Snake()
-    snake.name = name
-    snake.length = length
-    snake.species = species
-    snake.is_venomous = is_venomous
-    snake.save()
+def add_guest(account, name, length, species, is_venomous) -> Guest:
+    guest = Guest()
+    guest.name = name
+    guest.length = length
+    guest.species = species
+    guest.is_venomous = is_venomous
+    guest.save()
 
     vip = find_account_by_email(account.email)
-    vip.snake_ids.append(snake.id)
+    vip.guest_ids.append(guest.id)
     vip.save()
 
-    return snake
+    return guest
 
 
-def get_snakes_for_user(user_id: bson.ObjectId) -> List[Snake]:
+def get_guests_for_user(user_id: bson.ObjectId) -> List[Guest]:
     vip = Vip.objects(id=user_id).first()
-    snakes = Snake.objects(id__in=vip.snake_ids).all()
+    guests = Guest.objects(id__in=vip.guest_ids).all()
 
-    return list(snakes)
+    return list(guests)
 
 
-def get_available_cages(checkin: datetime.datetime,
-                        checkout: datetime.datetime, snake: Snake) -> List[Cage]:
-    min_size = snake.length / 4
+def get_available_toys(checkin: datetime.datetime,
+                        checkout: datetime.datetime, guest: Guest) -> List[Toy]:
+    min_size = guest.length / 4
 
-    query = Cage.objects() \
+    query = Toy.objects() \
         .filter(square_meters__gte=min_size) \
         .filter(bookings__check_in_date__lte=checkin) \
         .filter(bookings__check_out_date__gte=checkout)
 
-    if snake.is_venomous:
-        query = query.filter(allow_dangerous_snakes=True)
+    if guest.is_venomous:
+        query = query.filter(allow_dangerous_guests=True)
 
-    cages = query.order_by('price', '-square_meters')
+    toys = query.order_by('price', '-square_meters')
 
-    final_cages = []
-    for c in cages:
+    final_toys = []
+    for c in toys:
         for b in c.bookings:
             if b.check_in_date <= checkin and b.check_out_date >= checkout and b.patreon_guest_id is None:
-                final_cages.append(c)
+                final_toys.append(c)
 
-    return final_cages
+    return final_toys
 
 
-def book_cage(account, snake, cage, checkin, checkout):
+def book_toy(account, guest, toy, checkin, checkout):
     booking: Optional[Booking] = None
 
-    for b in cage.bookings:
+    for b in toy.bookings:
         if b.check_in_date <= checkin and b.check_out_date >= checkout and b.patreon_guest_id is None:
             booking = b
             break
 
     booking.patreon_vip_id = account.id
-    booking.patreon_guest_id = snake.id
+    booking.patreon_guest_id = guest.id
     booking.check_in_date = checkin
     booking.check_out_date = checkout
     booking.booked_date = datetime.datetime.now()
 
-    cage.save()
+    toy.save()
 
 
 def get_bookings_for_user(email: str) -> List[Booking]:
     account = find_account_by_email(email)
 
-    booked_cages = Cage.objects() \
+    booked_toys = Toy.objects() \
         .filter(bookings__guest_vip_id=account.id) \
         .only('bookings', 'name')
 
-    def map_cage_to_booking(cage, booking):
-        booking.cage = cage
+    def map_toy_to_booking(toy, booking):
+        booking.toy = toy
         return booking
 
     bookings = [
-        map_cage_to_booking(cage, booking)
-        for cage in booked_cages
-        for booking in cage.bookings
+        map_toy_to_booking(toy, booking)
+        for toy in booked_toys
+        for booking in toy.bookings
         if booking.patreon_vip_id == account.id
     ]
 
