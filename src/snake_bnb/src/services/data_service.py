@@ -6,26 +6,26 @@ import bson
 
 from data.bookings import Booking
 from data.cages import Cage
-from data.owners import Owner
+from data.vip import Vip
 from data.snakes import Snake
 
 
-def create_account(name: str, email: str) -> Owner:
-    owner = Owner()
-    owner.name = name
-    owner.email = email
+def create_account(name: str, email: str) -> Vip:
+    vip = Vip()
+    vip.name = name
+    vip.email = email
 
-    owner.save()
+    vip.save()
 
-    return owner
-
-
-def find_account_by_email(email: str) -> Owner:
-    owner = Owner.objects(email=email).first()
-    return owner
+    return vip
 
 
-def register_cage(active_account: Owner,
+def find_account_by_email(email: str) -> Vip:
+    vip = Vip.objects(email=email).first()
+    return vip
+
+
+def register_cage(active_account: Vip,
                   name, allow_dangerous, has_toys,
                   carpeted, meters, price) -> Cage:
     cage = Cage()
@@ -46,7 +46,7 @@ def register_cage(active_account: Owner,
     return cage
 
 
-def find_cages_for_user(account: Owner) -> List[Cage]:
+def find_cages_for_user(account: Vip) -> List[Cage]:
     query = Cage.objects(id__in=account.cage_ids)
     cages = list(query)
 
@@ -74,16 +74,16 @@ def add_snake(account, name, length, species, is_venomous) -> Snake:
     snake.is_venomous = is_venomous
     snake.save()
 
-    owner = find_account_by_email(account.email)
-    owner.snake_ids.append(snake.id)
-    owner.save()
+    vip = find_account_by_email(account.email)
+    vip.snake_ids.append(snake.id)
+    vip.save()
 
     return snake
 
 
 def get_snakes_for_user(user_id: bson.ObjectId) -> List[Snake]:
-    owner = Owner.objects(id=user_id).first()
-    snakes = Snake.objects(id__in=owner.snake_ids).all()
+    vip = Vip.objects(id=user_id).first()
+    snakes = Snake.objects(id__in=vip.snake_ids).all()
 
     return list(snakes)
 
@@ -105,7 +105,7 @@ def get_available_cages(checkin: datetime.datetime,
     final_cages = []
     for c in cages:
         for b in c.bookings:
-            if b.check_in_date <= checkin and b.check_out_date >= checkout and b.guest_snake_id is None:
+            if b.check_in_date <= checkin and b.check_out_date >= checkout and b.patreon_guest_id is None:
                 final_cages.append(c)
 
     return final_cages
@@ -115,12 +115,12 @@ def book_cage(account, snake, cage, checkin, checkout):
     booking: Optional[Booking] = None
 
     for b in cage.bookings:
-        if b.check_in_date <= checkin and b.check_out_date >= checkout and b.guest_snake_id is None:
+        if b.check_in_date <= checkin and b.check_out_date >= checkout and b.patreon_guest_id is None:
             booking = b
             break
 
-    booking.guest_owner_id = account.id
-    booking.guest_snake_id = snake.id
+    booking.patreon_vip_id = account.id
+    booking.patreon_guest_id = snake.id
     booking.check_in_date = checkin
     booking.check_out_date = checkout
     booking.booked_date = datetime.datetime.now()
@@ -132,7 +132,7 @@ def get_bookings_for_user(email: str) -> List[Booking]:
     account = find_account_by_email(email)
 
     booked_cages = Cage.objects() \
-        .filter(bookings__guest_owner_id=account.id) \
+        .filter(bookings__guest_vip_id=account.id) \
         .only('bookings', 'name')
 
     def map_cage_to_booking(cage, booking):
@@ -143,7 +143,7 @@ def get_bookings_for_user(email: str) -> List[Booking]:
         map_cage_to_booking(cage, booking)
         for cage in booked_cages
         for booking in cage.bookings
-        if booking.guest_owner_id == account.id
+        if booking.patreon_vip_id == account.id
     ]
 
     return bookings
