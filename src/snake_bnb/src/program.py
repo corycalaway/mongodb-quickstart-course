@@ -5,6 +5,7 @@ import data.mongo_setup as mongo_setup
 
 
 def main():
+    # Call this once and before we interact with anything else.
     mongo_setup.global_init()
 
     print_header()

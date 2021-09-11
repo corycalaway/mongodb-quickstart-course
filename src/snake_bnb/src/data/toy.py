@@ -4,7 +4,7 @@ import mongoengine
 from data.bookings import Booking
 
 
-class Cage(mongoengine.Document):
+class Toy(mongoengine.Document):
     registered_date = mongoengine.DateTimeField(default=datetime.datetime.now)
 
     name = mongoengine.StringField(required=True)
@@ -18,5 +18,5 @@ class Cage(mongoengine.Document):
 
     meta = {
         'db_alias': 'core',
-        'collection': 'cages'
+        'collection': 'toys'
     }

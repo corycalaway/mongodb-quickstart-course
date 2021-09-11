@@ -2,7 +2,7 @@ import datetime
 import mongoengine
 
 
-class Snake(mongoengine.Document):
+class Guest(mongoengine.Document):
     registered_date = mongoengine.DateTimeField(default=datetime.datetime.now)
     species = mongoengine.StringField(required=True)
 
@@ -12,5 +12,5 @@ class Snake(mongoengine.Document):
 
     meta = {
         'db_alias': 'core',
-        'collection': 'snakes'
+        'collection': 'guests'
     }
